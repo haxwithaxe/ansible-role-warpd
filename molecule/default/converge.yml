@@ -1,0 +1,7 @@
+---
+- name: Converge
+  hosts: all
+  tasks:
+    - name: "Include haxwithaxe.warpd"
+      include_role:
+        name: "haxwithaxe.warpd"

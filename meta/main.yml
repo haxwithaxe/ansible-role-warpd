@@ -1,0 +1,26 @@
+galaxy_info:
+  author: haxwithaxe
+  namespace: haxwithaxe
+  description: Install warpd
+
+  license: GPL-3.0-only
+
+  min_ansible_version: 2.1
+
+  platforms:
+  - name: Debian
+    versions:
+    - 12
+  - name: Ubuntu
+    versions:
+    - 22.04
+
+  galaxy_tags:
+    - desktop
+    - gui
+    - x11
+    - wayland
+    - mouse
+    - keyboard
+
+dependencies: []

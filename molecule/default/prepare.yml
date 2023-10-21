@@ -1,0 +1,12 @@
+---
+
+- name: Prepare
+  hosts: all
+  tasks:
+    - name: Install dependencies
+      apt:
+        update_cache: yes
+        name:
+          - checkinstall
+          - git
+        state: latest

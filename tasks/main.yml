@@ -1,0 +1,98 @@
+---
+
+- name: Check for previously installed warpd
+  tags: version_check,warpd_install,install
+  shell: 'warpd --version'
+  register: _warpd_installed_version_cmd
+  failed_when: no
+  changed_when: no
+
+- name: Set installed warpd version commit  # FIXME bad desciption
+  tags: version_check,warpd_install,install
+  set_fact:
+    installed_commit: "{{ _warpd_installed_version_cmd.stdout
+      | regex_search(': [a-f0-9]+\\)$')
+      | regex_search('[a-f0-9]+') }}"
+
+- name: Clone the ward git repo
+  tags: version_check,warpd_install,install
+  git:
+    repo: "{{ warpd_git_repo }}"
+    version: "{{ warpd_git_version }}"
+    dest: /tmp/warpd
+
+- name: Get short commit hash
+  tags: version_check,warpd_install,install
+  shell:
+    chdir: /tmp/warpd
+    cmd: 'git log --oneline | head -n 1 | cut -d " " -f 1'
+  register: _git_commit_short_hash_cmd
+
+- name: Get last tag
+  tags: version_check,warpd_install,install
+  shell:
+    chdir: /tmp/warpd
+    cmd: 'git describe --contains $(git log --tags --oneline| head -n 1 | cut -d " " -f 1)'
+  register: _git_last_tag_cmd
+
+- name: Build and install warpd
+  become: yes
+  become_user: root
+  when: _git_commit_short_hash_cmd.stdout != installed_commit
+  block:
+    - name: Install build dependencies
+      tags: warpd_install,install
+      apt:
+        name:
+          - libxi-dev
+          - libxinerama-dev
+          - libxft-dev
+          - libxfixes-dev
+          - libxtst-dev
+          - libx11-dev
+          - libcairo2-dev
+          - libxkbcommon-dev
+          - libwayland-dev
+        state: latest
+
+    - name: Build warpd
+      tags: warpd_install,install
+      vars:
+      shell:
+        chdir: /tmp/warpd
+        cmd: make
+
+    - name: Install warpd
+      tags: warpd_install,install
+      vars:
+        pkgversion: "{{ _git_last_tag_cmd.stdout | regex_search('v[0-9]+\\.[0-9]+\\.[0-9]+') }}"
+        pkgrelease: "{{ _git_commit_short_hash_cmd.stdout }}"
+      shell:
+        chdir: /tmp/warpd
+        cmd: 'checkinstall -D -y --pkgname warpd --pkgsource {{ warpd_git_repo }} --pkgversion "{{ pkgversion }}" --pkgrelease {{  pkgrelease }} --install'
+
+    - name: Remove build dependencies
+      tags: warpd_purge_build_deps
+      apt:
+        name:
+          - libxi-dev
+          - libxinerama-dev
+          - libxft-dev
+          - libxfixes-dev
+          - libxtst-dev
+          - libx11-dev
+          - libcairo2-dev
+          - libxkbcommon-dev
+          - libwayland-dev
+        state: absent
+
+# End: Install warpd
+
+- name: Cleanup temp files
+  tags: warpd_cleanup,cleanup
+  become: yes
+  become_user: root
+  file:
+    path: /tmp/warpd
+    state: absent
+
